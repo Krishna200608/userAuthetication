@@ -1,8 +1,12 @@
 import 'dotenv/config'
 import express from 'express';
 import bodyParser from 'body-parser';
-//import ejs from 'ejs';
+import ejs from 'ejs';
 import { User } from './models/schema.js';
+import session from "express-session";
+import flash from "connect-flash";
+import { flashMiddleware } from "./middlewares/flashMiddleware.js";
+
 //-----------------------------------------------------
 
 const app = express();
@@ -10,6 +14,18 @@ const app = express();
 app.use(express.static("public"));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
+
+
+
+app.use(session({
+    secret: "yourSecretKey", // Change to a strong secret
+    resave: false,
+    saveUninitialized: true
+}));
+
+// Middleware: Initialize connect-flash
+app.use(flash());
+app.use(flashMiddleware);
 
 
 //----------------------------------------------------------------------
@@ -27,23 +43,27 @@ app.route("/login")
     const username = req.body.username
     const password = req.body.password;
 
-    User.findOne(
-        {email : username}
-    )
-    .then((foundUser)=>{
-        if(foundUser){
-            if(foundUser.password === password){s
-                res.render("secrets");
+   //console.log(username);
+
+    User.findOne({email : username})
+        .then((foundUser)=>{
+            if(foundUser){
+                if(foundUser.password === password){
+                    res.render("secrets");
+                } else {
+                    req.flash("error", "Wrong password! Please try again.");
+                    res.redirect("/login")
+                }    
             } else {
-                console.log("Wrong password please try again");
-                res.redirect("/login")
-            }    
-        } else {
-            console.log("Can't find the user");
+                req.flash("error", "User not found! Please Register.");
+                res.redirect("/login");
+            }
+        })
+        .catch((err) => {
+            console.error("Error finding user:", err);
+            req.flash("error", "An error occurred. Please try again.");
             res.redirect("/login");
-        }
-    })
-    .catch((err)=>console.log("Failed to find the user from the database"))
+        });
 })
 
 app.route("/register")
