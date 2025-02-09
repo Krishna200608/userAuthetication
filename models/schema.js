@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import encrypt from 'mongoose-encryption';
+// import encrypt from 'mongoose-encryption';
 import 'dotenv/config'
 
 mongoose.connect(process.env.DB_CONNECTION_STRING)
@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     password: String
 })
 
-userSchema.plugin(encrypt, { secret: process.env.SECRET_KEY, encryptedFields: ["password"] });
+//userSchema.plugin(encrypt, { secret: process.env.SECRET_KEY, encryptedFields: ["password"] });
 
 const User = mongoose.model("User", userSchema);
 

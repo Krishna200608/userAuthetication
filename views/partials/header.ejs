@@ -32,26 +32,38 @@
   <!-- Toast Notification Script -->
   <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // Show server-side errors (from req.flash)
         let errorMessage = document.body.getAttribute("data-error");
         if (errorMessage && errorMessage.trim().length > 0) {
             toastr.error(errorMessage);
         }
-        const form = document.getElementById("loginForm");
-        form.addEventListener("submit", function (event) {
-            const emailInput = document.getElementById("email");
-            const email = emailInput.value.trim();
 
+        // Get form and email input
+        const form = document.getElementById("loginForm");
+        const emailInput = document.getElementById("email");
+
+        // Flag to prevent duplicate email validation messages
+        let emailErrorShown = false;
+
+        form.addEventListener("submit", function (event) {
+            const email = emailInput.value.trim();
+            
             // Custom email validation regex
-            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
             if (!emailPattern.test(email)) {
                 event.preventDefault();
-                toastr.error("Please enter a valid email address.");
+                if (!emailErrorShown) {  // Prevent duplicate toasts
+                    toastr.error("Please enter a valid email address.");
+                    emailErrorShown = true;
+                    setTimeout(() => { emailErrorShown = false; }, 3000);
+                }
                 emailInput.focus();
             }
         });
     });
 </script>
+
 
 
 

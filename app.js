@@ -6,6 +6,7 @@ import { User } from './models/schema.js';
 import session from "express-session";
 import flash from "connect-flash";
 import { flashMiddleware } from "./middlewares/flashMiddleware.js";
+import bcrypt from 'bcryptjs';
 
 //-----------------------------------------------------
 
@@ -14,8 +15,6 @@ const app = express();
 app.use(express.static("public"));
 app.set("view engine", "ejs");
 app.use(bodyParser.urlencoded({extended: true}));
-
-
 
 app.use(session({
     secret: "yourSecretKey", // Change to a strong secret
@@ -26,6 +25,9 @@ app.use(session({
 // Middleware: Initialize connect-flash
 app.use(flash());
 app.use(flashMiddleware);
+
+  
+const saltRounds = 10;
 
 
 //----------------------------------------------------------------------
@@ -39,32 +41,39 @@ app.route("/login")
     res.render("login")
 })
 
-.post((req, res)=>{
-    const username = req.body.username
+.post((req, res) => {  // Ensure you're defining the route with `app.post()`
+    const username = req.body.username;
     const password = req.body.password;
 
-   //console.log(username);
+    User.findOne({ email: username })
+        .then((foundUser) => {
+            if (!foundUser) {
+                req.flash("error", "User not found! Please register.");
+                return res.redirect("/login");
+            }
 
-    User.findOne({email : username})
-        .then((foundUser)=>{
-            if(foundUser){
-                if(foundUser.password === password){
-                    res.render("secrets");
+            bcrypt.compare(password, foundUser.password, (err, result) => {
+                if (err) {
+                    console.error("Error comparing passwords:", err);
+                    req.flash("error", "An error occurred. Please try again.");
+                    return res.redirect("/login");
+                }
+
+                if (result) {
+                    res.render("secrets", { successMessage: "Login successful! 😎 Welcome back." });
                 } else {
                     req.flash("error", "Wrong password! Please try again.");
-                    res.redirect("/login")
-                }    
-            } else {
-                req.flash("error", "User not found! Please Register.");
-                res.redirect("/login");
-            }
+                    res.redirect("/login");
+                }
+            });
         })
         .catch((err) => {
             console.error("Error finding user:", err);
             req.flash("error", "An error occurred. Please try again.");
             res.redirect("/login");
         });
-})
+});
+
 
 app.route("/register")
 .get((req, res)=>{
@@ -72,18 +81,35 @@ app.route("/register")
 })
 
 .post((req, res)=>{
-   const newUser = new User({
-    email : req.body.username,
-    password : req.body.password
-   })
 
-   newUser.save()
-   .then(()=>{
-        res.render("secrets")
-   })
-   .catch((err)=>{
-        console.log(err);
-   })
+    bcrypt.genSalt(saltRounds, function(err, salt) {
+        if(err){
+            console.log(err);
+            return res.redirect("/register");
+        }
+        bcrypt.hash(req.body.password, salt, function(err, hash) {
+            if (err) {
+                console.log(err);
+                return res.redirect("/register");
+            }
+            // Store hash in your password DB.
+            const newUser = new User({
+                email : req.body.username, 
+                password : hash
+               })
+            
+               newUser.save()
+               .then(()=>{
+                res.render("secrets", { successMessage: "Registration 😀 successful! Welcome." });
+               })
+               .catch((err)=>{
+                    console.log(err);
+                    res.redirect("/register")
+               });
+        });
+    });
+
+       
 })
 
 
