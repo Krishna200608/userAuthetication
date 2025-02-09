@@ -8,6 +8,8 @@ import flash from "connect-flash";
 import { flashMiddleware } from "./middlewares/flashMiddleware.js";
 import bcrypt from 'bcryptjs';
 
+
+
 //-----------------------------------------------------
 
 const app = express();
@@ -48,7 +50,7 @@ app.route("/login")
     User.findOne({ email: username })
         .then((foundUser) => {
             if (!foundUser) {
-                req.flash("error", "User not found! Please register.");
+                req.flash("error", "Useer not found! Please register.");
                 return res.redirect("/login");
             }
 
