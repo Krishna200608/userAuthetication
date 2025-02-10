@@ -1,6 +1,8 @@
 import flash from "connect-flash";
 
 export const flashMiddleware = (req, res, next) => {
-    res.locals.errorMessage = req.flash("error"); // Pass flash message to views
+    // Ensure flash messages are available in all views
+    res.locals.errorMessage = req.flash("error") || [];
+    res.locals.successMessage = req.flash("success") || [];
     next();
 };

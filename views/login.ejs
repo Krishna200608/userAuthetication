@@ -39,6 +39,16 @@
   </div>
 </div>
 
+<script>
+  if (errorMessage) {
+      toastr.error("<%= errorMessage %>");
+  }
+
+   if (successMessage) { 
+      toastr.success("<%= successMessage %>");
+   } 
+</script>
+
 
 
 <%- include('partials/footer') %>
