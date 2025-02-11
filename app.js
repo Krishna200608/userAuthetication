@@ -9,6 +9,7 @@ import { flashMiddleware } from "./middlewares/flashMiddleware.js";
 import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy  as FacebookStrategy } from 'passport-facebook';
 //-----------------------------------------------------
 
 const app = express();
@@ -50,7 +51,7 @@ passport.use(new GoogleStrategy({
     userProfileURL: "https://www.googleapis.com/oauth2/v3/userinfo" // Ensure this URL is correct
   },
   function(accessToken, refreshToken, profile, done) {
-    console.log(profile);
+   // console.log(profile);
     User.findOrCreate(
         { googleId: profile.id },
         { username: profile.emails?.[0]?.value || `google_${profile.id}` }, 
@@ -60,6 +61,44 @@ passport.use(new GoogleStrategy({
   }
 ));
 
+passport.use(new FacebookStrategy({
+    clientID: process.env.FACEBOOK_APP_ID, // Use environment variables
+    clientSecret: process.env.FACEBOOK_APP_SECRET,
+    callbackURL: '/auth/facebook/callback',
+    profileFields: ['id', 'emails', 'name'] // Request email and name
+  },
+  async (accessToken, refreshToken, profile, done) => {
+    try {
+      let user = await User.findOne({ facebookId: profile.id });
+
+      if (!user) {
+        user = new User({
+          facebookId: profile.id,
+          name: `${profile.name.givenName} ${profile.name.familyName}`,
+          email: profile.emails ? profile.emails[0].value : null
+        });
+        await user.save();
+      }
+
+      return done(null, user);
+    } catch (error) {
+      return done(error, null);
+    }
+  }
+));
+
+passport.serializeUser((user, done) => {
+  done(null, user.id);
+});
+
+passport.deserializeUser(async (id, done) => {
+  try {
+    const user = await User.findById(id);
+    done(null, user);
+  } catch (error) {
+    done(error, null);
+  }
+});
 
 
 // Middleware: Initialize connect-flash
@@ -73,7 +112,7 @@ app.get("/", function(req, res){
     res.render("home");
 })
 //----------------------------------------------------
-
+//Google
 app.get("/auth/google",
     passport.authenticate("google", { scope: ["profile", "email"] })
 );
@@ -85,6 +124,21 @@ app.get("/auth/google/secrets",
         res.redirect("/secrets");
     }
 );
+
+//--------------------------------------
+//Facebook
+
+// Route to start Facebook authentication
+app.get('/auth/facebook', passport.authenticate('facebook', { scope: ['email'] }));
+
+// Facebook callback route
+app.get('/auth/facebook/secrets',
+  passport.authenticate('facebook', {
+    successRedirect: '/secrets', // Redirect after successful login
+    failureRedirect: '/login' // Redirect if authentication fails
+  })
+);
+
 
 //Login Route-----------------------------------------------
 app.route("/login")    

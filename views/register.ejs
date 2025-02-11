@@ -34,17 +34,77 @@
             Sign Up with Google
           </a>
         </div>
-        <!-- <div class="card-body">
-          <a class="btn btn-block btn-social btn-facebook" href="/auth/google" role="button">
-            <i class="fab fa-facebook"></i>
-            <img src="https://www.svgrepo.com/show/303108/google-icon-logo.svg" alt="Google Logo" width="30" style="padding-right: 4px;"> -->
-            <!-- Sign Up with Facebook
-          </a>
-        </div> -->
+        <div class="card-body">
+          <fb:login-button 
+            scope="public_profile,email"
+            onlogin="checkLoginState();">
+          </fb:login-button>
+        </div>       
       </div>
     </div>
 
   </div>
 </div>
 
-<%- include('partials/header') %>
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '3123691914447680', // Replace with your Facebook App ID
+      cookie     : true,
+      xfbml      : true,
+      version    : 'v17.0'
+    });
+
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+  };
+
+  (function(d, s, id) {
+    var js, fjs = d.getElementsByTagName(s)[0];
+    if (d.getElementById(id)) return;
+    js = d.createElement(s); js.id = id;
+    js.src = "https://connect.facebook.net/en_US/sdk.js";
+    fjs.parentNode.insertBefore(js, fjs);
+  }(document, 'script', 'facebook-jssdk'));
+
+  function statusChangeCallback(response) {
+    if (response.status === 'connected') {
+      getUserInfo(response.authResponse.accessToken);
+    }
+  }
+
+  function loginWithFacebook() {
+    FB.login(function(response) {
+      if (response.authResponse) {
+        getUserInfo(response.authResponse.accessToken);
+      }
+    }, { scope: 'email,public_profile' });
+  }
+
+  function getUserInfo(accessToken) {
+    FB.api('/me', { fields: 'id,name,email' }, function(response) {
+      fetch('/auth/facebook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: response.id,
+          name: response.name,
+          email: response.email,
+          accessToken: accessToken 
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          window.location.href = '/secrets'; // Redirect to user dashboard
+        }
+      })
+      .catch(error => console.error('Error:', error));
+    });
+  }
+</script>
+
+
+
+<%- include('partials/footer') %>

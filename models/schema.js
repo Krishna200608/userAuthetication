@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
     email: { type: String, unique: true, sparse: true },
     password: String,
     googleId : { type: String, unique: true },
+    facebookId : { type: String, unique: true },
     secret : String
 })
 
