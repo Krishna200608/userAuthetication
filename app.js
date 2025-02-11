@@ -29,20 +29,22 @@ app.use(passport.session());
 
 passport.use(User.createStrategy());
 
-passport.serializeUser(function(user, cb) {
-    process.nextTick(function() {
-      cb(null, { id: user.id, username: user.username });
-    });
+passport.serializeUser((user, done) => {
+    done(null, user.id);
   });
   
-  passport.deserializeUser(function(user, cb) {
-    process.nextTick(function() {
-      return cb(null, user);
-    });
-  })
+  passport.deserializeUser(async (id, done) => {
+    try {
+      const user = await User.findById(id);
+      done(null, user);
+    } catch (error) {
+      done(error, null);
+    }
+  });
 
-console.log("Google Client ID:", process.env.CLIENT_ID);
-console.log("Google Client Secret:", process.env.CLIENT_SECRET);
+
+// console.log("Google Client ID:", process.env.CLIENT_ID);
+// console.log("Google Client Secret:", process.env.CLIENT_SECRET);
 
 passport.use(new GoogleStrategy({
     clientID: process.env.CLIENT_ID,
@@ -61,10 +63,11 @@ passport.use(new GoogleStrategy({
   }
 ));
 
+//Facebook Strategy
 passport.use(new FacebookStrategy({
     clientID: process.env.FACEBOOK_APP_ID, // Use environment variables
     clientSecret: process.env.FACEBOOK_APP_SECRET,
-    callbackURL: '/auth/facebook/callback',
+    callbackURL: '/auth/facebook/secrets',
     profileFields: ['id', 'emails', 'name'] // Request email and name
   },
   async (accessToken, refreshToken, profile, done) => {
@@ -87,18 +90,7 @@ passport.use(new FacebookStrategy({
   }
 ));
 
-passport.serializeUser((user, done) => {
-  done(null, user.id);
-});
 
-passport.deserializeUser(async (id, done) => {
-  try {
-    const user = await User.findById(id);
-    done(null, user);
-  } catch (error) {
-    done(error, null);
-  }
-});
 
 
 // Middleware: Initialize connect-flash
@@ -170,7 +162,7 @@ app.route("/login")
 app.route("/secrets")
 
 .get((req, res)=>{
-    User.find({"secret" : {$ne: null}})
+    User.find({"secrets" : {$ne: null}})
     .then((foundUsers)=>{
         if(foundUsers){
             res.render("secrets", {usersWithSecrets : foundUsers})
@@ -228,12 +220,12 @@ app.route("/submit")
 .post((req,res)=>{
     const submittedSecret = req.body.secret;
 
-    console.log(req.user.id);
+    //console.log(req.user.id);
 
     User.findById(req.user.id)
     .then((foundUser)=>{
         if(foundUser){
-            foundUser.secret = submittedSecret;
+            foundUser.secrets.push(submittedSecret);
             foundUser.save()
             .then(()=>{
                 res.redirect("/secrets")
@@ -249,6 +241,14 @@ app.route("/submit")
     })
 })
 
+app.get('/privacy-policy', (req, res) => {
+    res.render('privacy');
+  });
+  
+  app.get('/data-deletion', (req, res) => {
+    res.render('data-deletion');
+  });
+  
 
 
 app.listen(process.env.PORT || 3000, ()=>{
